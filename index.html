@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Matrix Multiplication Calculator</title>
+
+    <style>
+        /* ─── design tokens ──────────────────────────────────────────────── */
+        :root {
+            --bg: #f9fafb;
+            --surface: #ffffff;
+            --surface-alt: #f3f4f6;
+            --text: #111827;
+            --muted: #6b7280;
+            --accent: #0d9488;
+            --accent-dark: #0f766e;
+            --radius: 0.75rem;
+            --shadow: 0 2px 6px rgba(0, 0, 0, .08);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #111827;
+                --surface: #1f2937;
+                --surface-alt: #374151;
+                --text: #f9fafb;
+                --muted: #9ca3af;
+                --shadow: 0 2px 6px rgba(0, 0, 0, .45);
+            }
+        }
+
+        /* ─── layout ─────────────────────────────────────────────────────── */
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg);
+            color: var(--text);
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+            "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans",
+            sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+            "Segoe UI Symbol", "Noto Color Emoji";
+        }
+
+        .matrix-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .matrix-container,
+        #matrix-output-container {
+            background: var(--surface);
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: .75rem;
+        }
+
+        /* ─── buttons ───────────────────────────────────────────────────── */
+        .btn {
+            appearance: none;
+            border: none;
+            cursor: pointer;
+            width: 2.2rem;
+            height: 2.2rem;
+            line-height: 0;
+            font-size: 1.3rem;
+            font-weight: 600;
+            border-radius: calc(var(--radius) / 2);
+            background: var(--accent);
+            color: #fff;
+            user-select: none;
+            transition: background .15s;
+        }
+
+        .btn:hover {
+            background: var(--accent-dark);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        /* ─── operators ─────────────────────────────────────────────────── */
+        .operator {
+            font-size: 2.4rem;
+            font-weight: 600;
+            color: var(--muted);
+            user-select: none;
+        }
+
+        /* ─── number inputs inside MathML ───────────────────────────────── */
+        input[type="number"] {
+            width: 80px;
+            text-align: center;
+            padding: .15rem .3rem;
+            border: 1px solid var(--surface-alt);
+            border-radius: .375rem;
+            background: var(--surface-alt);
+            color: inherit;
+            font: inherit;
+        }
+
+        input[type="number"]:focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 1px;
+        }
+
+        /* Slightly enlarge MathML for readability */
+        math {
+            font-size: 1.25rem;
+        }
+
+        .highlight {
+            background: rgba(255, 223, 186, 0.5);
+            border-radius: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="matrix-wrapper">
+
+    <!-- Matrix A --------------------------------------------------- -->
+    <div id="matrix-a-container" class="matrix-container">
+        <div style="display:flex; gap:.5rem">
+            <math>
+                <mrow>
+                    <mo>[</mo>
+                    <mtable columnalign="center center center" rowspacing="0.5ex" class="row-container">
+                        <mtr></mtr> <!-- rows added by JS -->
+                    </mtable>
+                    <mo>]</mo>
+                </mrow>
+            </math>
+
+            <!-- column +/- -->
+            <div style="display:flex; flex-direction:column; gap:.4rem; justify-content:center">
+                <button title="Remove column" class="btn remove-col">−</button>
+                <button title="Add column" class="btn add-col">+</button>
+            </div>
+        </div>
+
+        <!-- row +/- -->
+        <div style="display:flex; gap:.4rem">
+            <button title="Remove row" class="btn remove-row">−</button>
+            <button title="Add row" class="btn add-row">+</button>
+        </div>
+    </div>
+
+    <!-- × operator -->
+    <div class="operator">×</div>
+
+    <!-- Matrix B --------------------------------------------------- -->
+    <div id="matrix-b-container" class="matrix-container">
+        <div style="display:flex; gap:.5rem">
+            <math>
+                <mrow>
+                    <mo>[</mo>
+                    <mtable columnalign="center center center" rowspacing="0.5ex" class="row-container">
+                        <mtr></mtr>
+                    </mtable>
+                    <mo>]</mo>
+                </mrow>
+            </math>
+
+            <div style="display:flex; flex-direction:column; gap:.4rem; justify-content:center">
+                <button title="Remove column" class="btn remove-col">−</button>
+                <button title="Add column" class="btn add-col">+</button>
+            </div>
+        </div>
+
+        <div style="display:flex; gap:.4rem">
+            <button title="Remove row" class="btn remove-row">−</button>
+            <button title="Add row" class="btn add-row">+</button>
+        </div>
+    </div>
+
+    <!-- = operator -->
+    <div class="operator">=</div>
+
+    <!-- Output ----------------------------------------------------- -->
+    <div id="matrix-output-container" class="matrix-container"></div>
+
+</div>
+
+<!-- ─── logic (unchanged) ──────────────────────────────────────────── -->
+<script>
+  function workaroundMathMLBrowserBug(mathElem) {
+    mathElem.innerHTML = mathElem.innerHTML;
+  }
+
+  function addRow(btn) {
+    const table = btn.closest('.matrix-container').querySelector('mtable');
+    const cols = table.querySelector('mtr').children.length;
+    const row = document.createElement('mtr');
+    for (let i = 0; i < cols; i++) {
+      const td = document.createElement('mtd');
+      td.innerHTML = `<mi><input type="number" step="0.01" value="${Math.floor(Math.random() * 100)}" /></mi>`;
+      row.appendChild(td);
+    }
+    table.appendChild(row);
+    refreshResult();
+    workaroundMathMLBrowserBug(table.closest('math'));
+  }
+
+  function removeRow(btn) {
+    const table = btn.closest('.matrix-container').querySelector('mtable');
+    if (table.querySelectorAll('mtr').length < 2) return alert("Need at least one row.");
+    table.removeChild(table.lastElementChild);
+    refreshResult();
+    workaroundMathMLBrowserBug(table.closest('math'));
+  }
+
+  function addCol(btn) {
+    const table = btn.closest('.matrix-container').querySelector('mtable');
+    table.querySelectorAll('mtr').forEach(tr => {
+      const td = document.createElement('mtd');
+      td.innerHTML = `<mi><input type="number" step="0.01" value="${Math.floor(Math.random() * 100)}" /></mi>`;
+      tr.appendChild(td);
+    });
+    refreshResult();
+    workaroundMathMLBrowserBug(table.closest('math'));
+  }
+
+  function removeColumn(btn) {
+    const table = btn.closest('.matrix-container').querySelector('mtable');
+    for (const tr of table.querySelectorAll('mtr')) {
+      if (tr.children.length < 2) return alert("Need at least one column.");
+      tr.removeChild(tr.lastElementChild);
+    }
+    refreshResult();
+    workaroundMathMLBrowserBug(table.closest('math'));
+  }
+
+  document.querySelectorAll('.add-col').forEach(btn => {
+    btn.addEventListener('click', () => addCol(btn));
+    addCol(btn);
+    addCol(btn);
+    addCol(btn);        // 3 initial cols
+  });
+  document.querySelectorAll('.add-row').forEach(btn => {
+    btn.addEventListener('click', () => addRow(btn));
+    addRow(btn);
+    addRow(btn);                     // 3 initial rows
+  });
+  document.querySelectorAll('.remove-row').forEach(btn =>
+    btn.addEventListener('click', () => removeRow(btn))
+  );
+  document.querySelectorAll('.remove-col').forEach(btn =>
+    btn.addEventListener('click', () => removeColumn(btn))
+  );
+
+  /* helpers ------------------------------------------------------- */
+  function readMatrix(container) {
+    return Array.from(container.querySelectorAll('mtr')).map(tr =>
+      Array.from(tr.querySelectorAll('input')).map(inp =>
+        (val => isNaN(val) ? 0 : val)(parseFloat(inp.value))
+      )
+    );
+  }
+
+  function refreshResult() {
+    const A = readMatrix(document.querySelector('#matrix-a-container'));
+    const B = readMatrix(document.querySelector('#matrix-b-container'));
+    const out = document.querySelector('#matrix-output-container');
+
+    const [aRows, aCols] = [A.length, A[0]?.length || 0];
+    const [bRows, bCols] = [B.length, B[0]?.length || 0];
+
+    if (aCols !== bRows || !aRows || !aCols || !bCols) {
+      out.innerHTML = `<div style="color:#ef4444">Incompatible dimensions (${aRows}×${aCols} ≠ ${bRows}×${bCols})</div>`;
+      return;
+    }
+
+    const C = Array.from({length: aRows}, () => Array(bCols).fill(0));
+    for (let i = 0; i < aRows; i++)
+      for (let j = 0; j < bCols; j++)
+        for (let k = 0; k < aCols; k++)
+          C[i][j] += A[i][k] * B[k][j];
+
+    const rows = C.map(r =>
+      `<mtr>${r.map(v => `<mtd><mi>${Number.isInteger(v) ? v : v.toFixed(2)}</mi></mtd>`).join('')}</mtr>`
+    ).join('');
+
+    out.innerHTML = `
+        <div>
+          <math>
+            <mrow>
+              <mo>[</mo>
+              <mtable rowspacing="0.5ex" columnalign="${'center '.repeat(bCols).trim()}">
+                ${rows}
+              </mtable>
+              <mo>]</mo>
+            </mrow>
+          </math>
+        </div>
+      <div id="output-title">&nbsp;</div>
+    `;
+
+    workaroundMathMLBrowserBug(out.querySelector('math'));
+
+    out.querySelectorAll('mi').forEach(mi => {
+        mi.addEventListener('mouseenter', () => {
+          const col = Array.prototype.indexOf.call(mi.parentElement.parentElement.children, mi.parentElement);
+          const row = Array.prototype.indexOf.call(mi.parentElement.parentElement.parentElement.children, mi.parentElement.parentElement);
+          const aRow = document.querySelector('#matrix-a-container').querySelector('mtable').children[row];
+          const bColElements = document.querySelectorAll(`#matrix-b-container mtr > mtd:nth-child(${col + 1})`);
+
+          aRow.classList.add('highlight')
+          bColElements.forEach(bCol => bCol.classList.add('highlight'));
+
+          let title = [];
+          for (let i = 0; i < aRow.children.length; i++) {
+            const aVal = aRow.children[i].querySelector('mi input').value;
+            const bVal = bColElements[i].querySelector('mi input').value
+            title.push(`${aVal}×${bVal}`);
+          }
+          document.querySelector('#output-title').innerText = title.join(' + ');
+        })
+        mi.addEventListener('mouseleave', () => {
+          document.querySelectorAll(`.highlight`).forEach(elem => elem.classList.remove('highlight'))
+          document.querySelector('#output-title').innerHTML = "&nbsp;"
+        })
+      }
+    );
+  }
+
+  document.body.addEventListener('input', e => {
+    if (e.target.matches('input[type="number"]')) refreshResult();
+  });
+
+  window.addEventListener('DOMContentLoaded', refreshResult);
+</script>
+
+</body>
+</html>
