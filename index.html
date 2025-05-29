@@ -54,6 +54,7 @@
             flex-wrap: wrap;
         }
 
+        #output-title,
         .matrix-container,
         #matrix-output-container {
             background: var(--surface);
@@ -64,6 +65,11 @@
             flex-direction: column;
             align-items: center;
             gap: .75rem;
+        }
+
+        #output-title{
+            opacity: 0.0;
+            transition: opacity 1.5s;
         }
 
         /* ─── buttons ───────────────────────────────────────────────────── */
@@ -129,73 +135,81 @@
 </head>
 <body>
 
-<div class="matrix-wrapper">
+<div style="display: flex;flex-direction: column;align-items: center;gap: 20px;">
+    <div class="matrix-wrapper">
 
-    <!-- Matrix A --------------------------------------------------- -->
-    <div id="matrix-a-container" class="matrix-container">
-        <div style="display:flex; gap:.5rem">
-            <math>
-                <mrow>
-                    <mo>[</mo>
-                    <mtable columnalign="center center center" rowspacing="0.5ex" class="row-container">
-                        <mtr></mtr> <!-- rows added by JS -->
-                    </mtable>
-                    <mo>]</mo>
-                </mrow>
-            </math>
+        <!-- Matrix A --------------------------------------------------- -->
+        <div id="matrix-a-container" class="matrix-container">
+            <div style="display:flex; gap:.5rem">
+                <math>
+                    <mrow>
+                        <mo>[</mo>
+                        <mtable columnalign="center" rowspacing="0.5ex" class="row-container">
+                            <mtr></mtr> <!-- rows added by JS -->
+                        </mtable>
+                        <mo>]</mo>
+                    </mrow>
+                </math>
 
-            <!-- column +/- -->
-            <div style="display:flex; flex-direction:column; gap:.4rem; justify-content:center">
-                <button title="Remove column" class="btn remove-col">−</button>
-                <button title="Add column" class="btn add-col">+</button>
+                <!-- column +/- -->
+                <div style="display:flex; flex-direction:column; gap:.4rem; justify-content:center">
+                    <button title="Remove column" class="btn remove-col">−</button>
+                    <button title="Add column" class="btn add-col">+</button>
+                </div>
+            </div>
+
+            <!-- row +/- -->
+            <div style="display:flex; gap:.4rem">
+                <button title="Remove row" class="btn remove-row">−</button>
+                <button title="Add row" class="btn add-row">+</button>
             </div>
         </div>
 
-        <!-- row +/- -->
-        <div style="display:flex; gap:.4rem">
-            <button title="Remove row" class="btn remove-row">−</button>
-            <button title="Add row" class="btn add-row">+</button>
-        </div>
-    </div>
+        <!-- × operator -->
+        <div class="operator">×</div>
 
-    <!-- × operator -->
-    <div class="operator">×</div>
+        <!-- Matrix B --------------------------------------------------- -->
+        <div id="matrix-b-container" class="matrix-container">
+            <div style="display:flex; gap:.5rem">
+                <math>
+                    <mrow>
+                        <mo>[</mo>
+                        <mtable columnalign="center" rowspacing="0.5ex" class="row-container">
+                            <mtr></mtr>
+                        </mtable>
+                        <mo>]</mo>
+                    </mrow>
+                </math>
 
-    <!-- Matrix B --------------------------------------------------- -->
-    <div id="matrix-b-container" class="matrix-container">
-        <div style="display:flex; gap:.5rem">
-            <math>
-                <mrow>
-                    <mo>[</mo>
-                    <mtable columnalign="center center center" rowspacing="0.5ex" class="row-container">
-                        <mtr></mtr>
-                    </mtable>
-                    <mo>]</mo>
-                </mrow>
-            </math>
+                <div style="display:flex; flex-direction:column; gap:.4rem; justify-content:center">
+                    <button title="Remove column" class="btn remove-col">−</button>
+                    <button title="Add column" class="btn add-col">+</button>
+                </div>
+            </div>
 
-            <div style="display:flex; flex-direction:column; gap:.4rem; justify-content:center">
-                <button title="Remove column" class="btn remove-col">−</button>
-                <button title="Add column" class="btn add-col">+</button>
+            <div style="display:flex; gap:.4rem">
+                <button title="Remove row" class="btn remove-row">−</button>
+                <button title="Add row" class="btn add-row">+</button>
             </div>
         </div>
 
-        <div style="display:flex; gap:.4rem">
-            <button title="Remove row" class="btn remove-row">−</button>
-            <button title="Add row" class="btn add-row">+</button>
-        </div>
+        <!-- = operator -->
+        <div class="operator">=</div>
+
+        <div id="matrix-output-container" class="matrix-container"></div>
+
     </div>
 
-    <!-- = operator -->
-    <div class="operator">=</div>
-
-    <!-- Output ----------------------------------------------------- -->
-    <div id="matrix-output-container" class="matrix-container"></div>
-
+    <div id="output-title">&nbsp;</div>
 </div>
 
 <!-- ─── logic (unchanged) ──────────────────────────────────────────── -->
 <script>
+  /**
+   * Yes, this is needed.
+   * For Chromium-based browsers and Firefox.
+   * Workaround for a MathML browser bug where the MathML has a visual glitch
+   */
   function workaroundMathMLBrowserBug(mathElem) {
     mathElem.innerHTML = mathElem.innerHTML;
   }
@@ -305,7 +319,6 @@
             </mrow>
           </math>
         </div>
-      <div id="output-title">&nbsp;</div>
     `;
 
     workaroundMathMLBrowserBug(out.querySelector('math'));
@@ -326,11 +339,12 @@
             const bVal = bColElements[i].querySelector('mi input').value
             title.push(`${aVal}×${bVal}`);
           }
-          document.querySelector('#output-title').innerText = title.join(' + ');
+          document.querySelector('#output-title').innerText = title.join(' + ') + ` = ${mi.innerHTML}`;
+          document.querySelector('#output-title').style.opacity = "1.0";
         })
         mi.addEventListener('mouseleave', () => {
           document.querySelectorAll(`.highlight`).forEach(elem => elem.classList.remove('highlight'))
-          document.querySelector('#output-title').innerHTML = "&nbsp;"
+          document.querySelector('#output-title').style.opacity = "0.0";
         })
       }
     );
